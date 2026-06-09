@@ -638,6 +638,39 @@
       transform: translateY(0);
     }
 
+    .context-menu {
+      position: fixed;
+      z-index: 30;
+      display: none;
+      min-width: 152px;
+      padding: 6px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .context-menu.show {
+      display: grid;
+      gap: 4px;
+    }
+
+    .context-menu button {
+      width: 100%;
+      min-height: 38px;
+      border: 0;
+      border-radius: var(--control-radius);
+      color: var(--text);
+      background: transparent;
+      text-align: left;
+      padding: 0 10px;
+    }
+
+    .context-menu button:hover {
+      background: var(--surface-muted);
+    }
+
     @keyframes rise {
       from {
         opacity: 0;
@@ -792,43 +825,6 @@
         <section class="panel">
           <div class="panel-header">
             <div>
-              <h2 class="panel-title">日期记录</h2>
-              <p class="panel-subtitle">点击日历日期后设置开始、结束或备注</p>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="date-card">
-              <div class="selected-date">
-                <span>
-                  <strong id="selectedDateText">未选择日期</strong>
-                  <span id="selectionHint">在日历中点选日期</span>
-                </span>
-                <button class="icon-button" id="clearSelectionBtn" type="button" title="清除选择" aria-label="清除选择">
-                  <svg class="icon" viewBox="0 0 24 24">
-                    <path d="M18 6 6 18"></path>
-                    <path d="m6 6 12 12"></path>
-                  </svg>
-                </button>
-              </div>
-              <div class="selection-actions">
-                <button class="primary-button" id="setStartBtn" type="button">设为开始</button>
-                <button class="primary-button" id="setEndBtn" type="button">设为结束</button>
-              </div>
-              <div class="field">
-                <label for="dayNote">日期备注</label>
-                <textarea id="dayNote" maxlength="160" placeholder="可记录这一天的症状、心情或用药情况"></textarea>
-              </div>
-              <div class="selection-actions">
-                <button class="text-button" id="saveNoteBtn" type="button">保存备注</button>
-                <button class="text-button" id="clearNoteBtn" type="button">清除备注</button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel">
-          <div class="panel-header">
-            <div>
               <h2 class="panel-title">周期设置</h2>
               <p class="panel-subtitle">默认 28 天，也会参考历史平均值</p>
             </div>
@@ -919,6 +915,9 @@
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <div class="context-menu" id="dateMenu" role="menu">
+    <button id="dateNoteMenuBtn" type="button" role="menuitem">日期备注</button>
+  </div>
 
   <script>
     /*
@@ -938,6 +937,7 @@
       dayNotes: {},
       selectedDate: "",
       draftStartDate: "",
+      contextDate: "",
       settings: {
         cycleLength: 28,
         darkMode: false
@@ -956,14 +956,8 @@
       nextMonthBtn: document.getElementById("nextMonthBtn"),
       monthLabel: document.getElementById("monthLabel"),
       calendarGrid: document.getElementById("calendarGrid"),
-      selectedDateText: document.getElementById("selectedDateText"),
-      selectionHint: document.getElementById("selectionHint"),
-      clearSelectionBtn: document.getElementById("clearSelectionBtn"),
-      setStartBtn: document.getElementById("setStartBtn"),
-      setEndBtn: document.getElementById("setEndBtn"),
-      dayNote: document.getElementById("dayNote"),
-      saveNoteBtn: document.getElementById("saveNoteBtn"),
-      clearNoteBtn: document.getElementById("clearNoteBtn"),
+      dateMenu: document.getElementById("dateMenu"),
+      dateNoteMenuBtn: document.getElementById("dateNoteMenuBtn"),
       cycleLength: document.getElementById("cycleLength"),
       saveCycleBtn: document.getElementById("saveCycleBtn"),
       averageCycle: document.getElementById("averageCycle"),
@@ -987,11 +981,11 @@
       els.themeToggle.addEventListener("click", toggleDarkMode);
       els.prevMonthBtn.addEventListener("click", () => changeMonth(-1));
       els.nextMonthBtn.addEventListener("click", () => changeMonth(1));
-      els.clearSelectionBtn.addEventListener("click", clearDateSelection);
-      els.setStartBtn.addEventListener("click", setSelectedAsStart);
-      els.setEndBtn.addEventListener("click", setSelectedAsEnd);
-      els.saveNoteBtn.addEventListener("click", saveDayNote);
-      els.clearNoteBtn.addEventListener("click", clearDayNote);
+      els.dateNoteMenuBtn.addEventListener("click", openDateNotePrompt);
+      document.addEventListener("click", closeDateMenu);
+      document.addEventListener("keydown", event => {
+        if (event.key === "Escape") closeDateMenu();
+      });
       els.saveCycleBtn.addEventListener("click", saveCycleLength);
       els.exportBtnBottom.addEventListener("click", exportData);
       els.importBtnBottom.addEventListener("click", () => els.importFile.click());
@@ -1000,7 +994,6 @@
 
     function hydrateDefaults() {
       els.cycleLength.value = state.settings.cycleLength;
-      clearDateSelection();
       applyTheme();
     }
 
@@ -1040,7 +1033,6 @@
       renderPredictions();
       renderStats();
       renderRecords();
-      renderSelectedDate();
     }
 
     function applyTheme() {
@@ -1063,42 +1055,17 @@
 
     function selectCalendarDate(dateKey) {
       state.selectedDate = dateKey;
-      renderSelectedDate();
-      renderCalendar();
-    }
-
-    function setSelectedAsStart() {
-      if (!state.selectedDate) {
-        showToast("请先在日历中选择日期");
-        return;
-      }
-
-      state.draftStartDate = state.selectedDate;
-      renderSelectedDate();
-      renderCalendar();
-      showToast(`${formatDisplayDate(state.draftStartDate)} 已设为开始日期`);
-    }
-
-    function setSelectedAsEnd() {
-      if (!state.selectedDate) {
-        showToast("请先在日历中选择日期");
-        return;
-      }
-
       if (!state.draftStartDate) {
-        state.draftStartDate = state.selectedDate;
-        renderSelectedDate();
+        state.draftStartDate = dateKey;
         renderCalendar();
-        showToast("已先设为开始日期，请再选择结束日期");
+        showToast(`${formatDisplayDate(dateKey)} 已选为开始日期`);
         return;
       }
 
-      const startDate = dateOnly(state.draftStartDate);
-      const endDate = dateOnly(state.selectedDate);
-      if (endDate < startDate) {
-        showToast("结束日期不能早于开始日期");
-        return;
-      }
+      const firstDate = dateOnly(state.draftStartDate);
+      const secondDate = dateOnly(dateKey);
+      const startDate = firstDate <= secondDate ? firstDate : secondDate;
+      const endDate = firstDate <= secondDate ? secondDate : firstDate;
 
       const record = {
         id: cryptoRandomId(),
@@ -1107,66 +1074,53 @@
         note: ""
       };
 
-      state.records.push(record);
+      state.records = [record];
       state.draftStartDate = "";
       saveData();
       render();
-      showToast("经期记录已保存");
+      showToast("已更新为最新经期记录");
     }
 
-    function saveDayNote() {
-      if (!state.selectedDate) {
-        showToast("请先在日历中选择日期");
-        return;
-      }
-
-      const note = els.dayNote.value.trim();
-      if (note) {
-        state.dayNotes[state.selectedDate] = note;
-      } else {
-        delete state.dayNotes[state.selectedDate];
-      }
-
-      saveData();
-      render();
-      showToast(note ? "备注已保存" : "备注已清空");
-    }
-
-    function clearDayNote() {
-      if (!state.selectedDate) {
-        showToast("请先在日历中选择日期");
-        return;
-      }
-
-      delete state.dayNotes[state.selectedDate];
-      saveData();
-      render();
-      showToast("备注已清除");
-    }
-
-    function clearDateSelection() {
-      state.selectedDate = "";
-      state.draftStartDate = "";
-      renderSelectedDate();
+    function openDateMenu(event, dateKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      state.contextDate = dateKey;
+      state.selectedDate = dateKey;
       renderCalendar();
+
+      const menuWidth = 164;
+      const menuHeight = 52;
+      const left = Math.min(event.clientX, window.innerWidth - menuWidth - 10);
+      const top = Math.min(event.clientY, window.innerHeight - menuHeight - 10);
+
+      els.dateMenu.style.left = `${Math.max(10, left)}px`;
+      els.dateMenu.style.top = `${Math.max(10, top)}px`;
+      els.dateMenu.classList.add("show");
     }
 
-    function renderSelectedDate() {
-      if (!state.selectedDate) {
-        els.selectedDateText.textContent = "未选择日期";
-        els.selectionHint.textContent = "在日历中点选日期";
-        els.dayNote.value = "";
-        return;
+    function closeDateMenu() {
+      els.dateMenu.classList.remove("show");
+    }
+
+    function openDateNotePrompt() {
+      const dateKey = state.contextDate || state.selectedDate;
+      closeDateMenu();
+      if (!dateKey) return;
+
+      const currentNote = state.dayNotes[dateKey] || "";
+      const note = window.prompt(`${formatDisplayDate(dateKey)} 日期备注`, currentNote);
+      if (note === null) return;
+
+      const cleanNote = note.trim().slice(0, 160);
+      if (cleanNote) {
+        state.dayNotes[dateKey] = cleanNote;
+      } else {
+        delete state.dayNotes[dateKey];
       }
 
-      const dateStatus = [];
-      if (state.draftStartDate) dateStatus.push(`开始：${formatDisplayDate(state.draftStartDate)}`);
-      if (findRecordByDate(state.selectedDate)) dateStatus.push("已在经期记录内");
-      if (state.dayNotes[state.selectedDate]) dateStatus.push("已有备注");
-
-      els.selectedDateText.textContent = formatDisplayDate(state.selectedDate);
-      els.selectionHint.textContent = dateStatus.join(" · ") || "可设为开始、结束或添加备注";
-      els.dayNote.value = state.dayNotes[state.selectedDate] || "";
+      saveData();
+      render();
+      showToast(cleanNote ? "备注已保存" : "备注已清空");
     }
 
     function deleteRecord(id) {
@@ -1214,6 +1168,7 @@
         button.textContent = String(current.getDate());
         button.title = buildDayTitle(key, predictionSeries, periodDates);
         button.addEventListener("click", () => selectCalendarDate(key));
+        button.addEventListener("contextmenu", event => openDateMenu(event, key));
 
         if (current.getMonth() !== month) button.classList.add("other-month");
         if (periodDates.has(key)) button.classList.add("period");
@@ -1346,7 +1301,10 @@
       if (!record) return;
 
       state.viewDate = startOfMonth(dateOnly(record.startDate));
-      selectCalendarDate(record.startDate);
+      state.selectedDate = record.startDate;
+      state.draftStartDate = "";
+      closeDateMenu();
+      renderCalendar();
     }
 
     function getPrediction() {
@@ -1499,7 +1457,10 @@
 
           els.cycleLength.value = state.settings.cycleLength;
           saveData();
-          clearDateSelection();
+          state.selectedDate = "";
+          state.draftStartDate = "";
+          state.contextDate = "";
+          closeDateMenu();
           render();
           showToast("JSON 数据已导入");
         } catch (error) {
