@@ -30,10 +30,11 @@
       --ovulation-soft: rgba(10, 132, 255, 0.14);
       --future-surface: #f0f1f5;
       --future-text: #8e96a3;
-      --future-predicted-text: #9f6f7b;
-      --future-period: rgba(178, 111, 124, 0.16);
+      --future-predicted-text: #9b6470;
+      --future-period: #e8d5da;
       --future-fertile: rgba(142, 150, 163, 0.16);
       --future-ovulation: rgba(142, 150, 163, 0.18);
+      --today-dot: #111111;
       --warning: #ff9f0a;
       --danger: #ff3b30;
       --shadow: 0 18px 50px rgba(18, 25, 38, 0.08);
@@ -60,10 +61,11 @@
       --ovulation-soft: rgba(100, 181, 255, 0.16);
       --future-surface: #25272e;
       --future-text: #858b96;
-      --future-predicted-text: #c59aa7;
-      --future-period: rgba(197, 154, 167, 0.18);
+      --future-predicted-text: #d2a6b2;
+      --future-period: #3a2f35;
       --future-fertile: rgba(133, 139, 150, 0.18);
       --future-ovulation: rgba(133, 139, 150, 0.2);
+      --today-dot: #f5f5f7;
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
     }
 
@@ -335,16 +337,16 @@
     }
 
     .day.predicted-period {
-      color: var(--accent-strong);
-      background: linear-gradient(135deg, var(--accent-soft), transparent);
-      border-color: rgba(255, 79, 123, 0.32);
+      color: var(--future-predicted-text);
+      background: var(--future-period);
+      border-color: rgba(155, 100, 112, 0.28);
       font-weight: 800;
     }
 
     .day.future-month.predicted-period {
       color: var(--future-predicted-text);
-      background: linear-gradient(135deg, var(--future-period), var(--future-surface) 72%);
-      border-color: rgba(159, 111, 123, 0.3);
+      background: var(--future-period);
+      border-color: rgba(155, 100, 112, 0.28);
     }
 
     .day.fertile {
@@ -381,7 +383,7 @@
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--accent);
+      background: var(--today-dot);
       transform: translateX(-50%);
     }
 
@@ -436,11 +438,11 @@
     }
 
     .dot.today-dot {
-      color: #111111;
+      color: var(--today-dot);
     }
 
-    body.dark .dot.today-dot {
-      color: #f5f5f7;
+    .dot.note-dot {
+      color: var(--warning);
     }
 
     .side-stack {
@@ -982,6 +984,7 @@
           <span class="legend-item"><span class="dot fertile-dot"></span>易孕期</span>
           <span class="legend-item"><span class="dot ovulation-dot"></span>排卵日</span>
           <span class="legend-item"><span class="dot today-dot"></span>今天圆点</span>
+          <span class="legend-item"><span class="dot note-dot"></span>日期备注</span>
         </div>
       </div>
 
@@ -1094,9 +1097,17 @@
   </div>
   <div class="version-popover" id="versionPopover" aria-live="polite">
     <div class="version-current">
-      <strong>当前版本 v1.6</strong>
+      <strong>当前版本 v1.8</strong>
     </div>
     <ul class="version-list">
+      <li>
+        <strong>v1.8</strong>
+        <span>统一本月与后续月份的预测经期颜色；修复当前日期圆点与图例颜色不一致的问题；新增日期备注图例；优化未来预测经期为低明度灰粉色。</span>
+      </li>
+      <li>
+        <strong>v1.7</strong>
+        <span>优化版本更新浮层；补充 v1.0 到 v1.6 的完整版本说明；精简日历图例并调整今日圆点图例。</span>
+      </li>
       <li>
         <strong>v1.6</strong>
         <span>日历只显示当前月份日期；修复后续月份预测缺失；优化后续月份预测经期的灰粉色显示。</span>
