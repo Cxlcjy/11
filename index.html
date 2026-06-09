@@ -1074,11 +1074,11 @@
         note: ""
       };
 
-      state.records = [record];
+      state.records = replaceRecordsInSameMonths(record);
       state.draftStartDate = "";
       saveData();
       render();
-      showToast("已更新为最新经期记录");
+      showToast("已更新本月经期记录");
     }
 
     function openDateMenu(event, dateKey) {
@@ -1503,6 +1503,27 @@
 
     function sortRecords(records) {
       return [...records].sort((a, b) => dateOnly(a.startDate) - dateOnly(b.startDate));
+    }
+
+    function replaceRecordsInSameMonths(newRecord) {
+      const months = getMonthsBetween(newRecord.startDate, newRecord.endDate);
+      const preservedRecords = state.records.filter(record => !recordTouchesMonths(record, months));
+      return sortRecords([...preservedRecords, newRecord]);
+    }
+
+    function recordTouchesMonths(record, monthSet) {
+      return [...getMonthsBetween(record.startDate, record.endDate)].some(monthKey => monthSet.has(monthKey));
+    }
+
+    function getMonthsBetween(startDate, endDate) {
+      const months = new Set();
+      const end = dateOnly(endDate);
+
+      for (let cursor = startOfMonth(dateOnly(startDate)); cursor <= end; cursor = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1)) {
+        months.add(`${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`);
+      }
+
+      return months;
     }
 
     function findRecordByDate(dateKey) {
