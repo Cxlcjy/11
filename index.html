@@ -30,8 +30,8 @@
       --ovulation-soft: rgba(10, 132, 255, 0.14);
       --future-surface: #f0f1f5;
       --future-text: #8e96a3;
-      --future-predicted-text: #a27682;
-      --future-period: rgba(255, 79, 123, 0.12);
+      --future-predicted-text: #9f6f7b;
+      --future-period: rgba(178, 111, 124, 0.16);
       --future-fertile: rgba(142, 150, 163, 0.16);
       --future-ovulation: rgba(142, 150, 163, 0.18);
       --warning: #ff9f0a;
@@ -60,8 +60,8 @@
       --ovulation-soft: rgba(100, 181, 255, 0.16);
       --future-surface: #25272e;
       --future-text: #858b96;
-      --future-predicted-text: #b38a98;
-      --future-period: rgba(255, 95, 139, 0.14);
+      --future-predicted-text: #c59aa7;
+      --future-period: rgba(197, 154, 167, 0.18);
       --future-fertile: rgba(133, 139, 150, 0.18);
       --future-ovulation: rgba(133, 139, 150, 0.2);
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
@@ -343,8 +343,8 @@
 
     .day.future-month.predicted-period {
       color: var(--future-predicted-text);
-      background: linear-gradient(135deg, var(--future-period), var(--future-surface));
-      border-color: rgba(142, 150, 163, 0.38);
+      background: linear-gradient(135deg, var(--future-period), var(--future-surface) 72%);
+      border-color: rgba(159, 111, 123, 0.3);
     }
 
     .day.fertile {
@@ -433,6 +433,14 @@
 
     .dot.ovulation-dot {
       color: var(--ovulation);
+    }
+
+    .dot.today-dot {
+      color: #111111;
+    }
+
+    body.dark .dot.today-dot {
+      color: #f5f5f7;
     }
 
     .side-stack {
@@ -971,10 +979,9 @@
 
         <div class="legend">
           <span class="legend-item"><span class="dot period-dot"></span>经期</span>
-          <span class="legend-item"><span class="dot period-dot"></span>预测经期</span>
           <span class="legend-item"><span class="dot fertile-dot"></span>易孕期</span>
           <span class="legend-item"><span class="dot ovulation-dot"></span>排卵日</span>
-          <span class="legend-item"><span class="dot period-dot"></span>今天圆点</span>
+          <span class="legend-item"><span class="dot today-dot"></span>今天圆点</span>
         </div>
       </div>
 
@@ -1087,29 +1094,36 @@
   </div>
   <div class="version-popover" id="versionPopover" aria-live="polite">
     <div class="version-current">
-      <strong>当前版本 v1.5</strong>
-      <span>修复未来月份预测显示</span>
+      <strong>当前版本 v1.6</strong>
     </div>
     <ul class="version-list">
       <li>
+        <strong>v1.6</strong>
+        <span>日历只显示当前月份日期；修复后续月份预测缺失；优化后续月份预测经期的灰粉色显示。</span>
+      </li>
+      <li>
+        <strong>v1.5</strong>
+        <span>恢复真实记录月份的易孕期和排卵日；后续预测月份只显示经期预测；版本浮层更新为 v1.5。</span>
+      </li>
+      <li>
         <strong>v1.4</strong>
-        <span>优化主界面，新增设置与版本</span>
+        <span>优化主界面；将周期设置、最近记录、数据管理移入设置弹窗；新增版本更新浮层；调整右上角按钮顺序。</span>
       </li>
       <li>
         <strong>v1.3</strong>
-        <span>修复了后续月份选择日期会导致之前的月份日期消失的问题</span>
+        <span>修复后续月份选择真实经期时，之前月份真实记录被删除的问题；改为按月份替换记录。</span>
       </li>
       <li>
         <strong>v1.2</strong>
-        <span>修复了单月多段经期的问题</span>
+        <span>移除日期记录面板；改为日历两次点击选择经期区间；同月重选只保留最新经期；右键日期添加备注。</span>
       </li>
       <li>
         <strong>v1.1</strong>
-        <span>优化日期选择功能</span>
+        <span>优化日期选择功能；通过日历操作开始和结束日期；增加单日备注能力；预测日期可在后续月份体现。</span>
       </li>
       <li>
         <strong>v1.0</strong>
-        <span>初始版</span>
+        <span>初始单文件经期记录应用；支持本地保存、日历高亮、周期预测、统计、深色模式、JSON 导入导出。</span>
       </li>
     </ul>
   </div>
