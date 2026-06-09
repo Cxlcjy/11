@@ -30,7 +30,8 @@
       --ovulation-soft: rgba(10, 132, 255, 0.14);
       --future-surface: #f0f1f5;
       --future-text: #8e96a3;
-      --future-period: rgba(142, 150, 163, 0.22);
+      --future-predicted-text: #a27682;
+      --future-period: rgba(255, 79, 123, 0.12);
       --future-fertile: rgba(142, 150, 163, 0.16);
       --future-ovulation: rgba(142, 150, 163, 0.18);
       --warning: #ff9f0a;
@@ -59,7 +60,8 @@
       --ovulation-soft: rgba(100, 181, 255, 0.16);
       --future-surface: #25272e;
       --future-text: #858b96;
-      --future-period: rgba(133, 139, 150, 0.24);
+      --future-predicted-text: #b38a98;
+      --future-period: rgba(255, 95, 139, 0.14);
       --future-fertile: rgba(133, 139, 150, 0.18);
       --future-ovulation: rgba(133, 139, 150, 0.2);
       --shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
@@ -314,6 +316,11 @@
       background: transparent;
     }
 
+    .day.placeholder {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
     .day.future-month {
       color: var(--future-text);
       background: var(--future-surface);
@@ -335,9 +342,9 @@
     }
 
     .day.future-month.predicted-period {
-      color: var(--future-text);
+      color: var(--future-predicted-text);
       background: linear-gradient(135deg, var(--future-period), var(--future-surface));
-      border-color: rgba(142, 150, 163, 0.36);
+      border-color: rgba(142, 150, 163, 0.38);
     }
 
     .day.fertile {
@@ -1377,18 +1384,25 @@
       const month = state.viewDate.getMonth();
       const firstDay = new Date(year, month, 1);
       const startOffset = firstDay.getDay();
-      const gridStart = addDays(firstDay, -startOffset);
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const monthEnd = new Date(year, month, daysInMonth);
       const todayKey = formatDate(new Date());
       const currentMonthStart = startOfMonth(new Date());
       const periodDates = buildPeriodDateSet();
-      const prediction = getPrediction();
-      const predictionSeries = getPredictionSeries(12);
+      const predictionSeries = getPredictionSeriesForRange(firstDay, monthEnd);
 
       els.monthLabel.textContent = `${year}年${month + 1}月`;
       els.calendarGrid.innerHTML = "";
 
-      for (let index = 0; index < 42; index += 1) {
-        const current = addDays(gridStart, index);
+      for (let index = 0; index < startOffset; index += 1) {
+        const placeholder = document.createElement("span");
+        placeholder.className = "day placeholder";
+        placeholder.setAttribute("aria-hidden", "true");
+        els.calendarGrid.appendChild(placeholder);
+      }
+
+      for (let dayOfMonth = 1; dayOfMonth <= daysInMonth; dayOfMonth += 1) {
+        const current = new Date(year, month, dayOfMonth);
         const key = formatDate(current);
         const button = document.createElement("button");
         button.type = "button";
@@ -1400,7 +1414,6 @@
 
         const isFutureMonth = startOfMonth(current) > currentMonthStart;
 
-        if (current.getMonth() !== month) button.classList.add("other-month");
         if (isFutureMonth) button.classList.add("future-month");
         if (periodDates.has(key)) button.classList.add("period");
         if (!periodDates.has(key) && predictionSeries.predictedPeriodDates.has(key)) button.classList.add("predicted-period");
@@ -1573,6 +1586,18 @@
     }
 
     function getPredictionSeries(count = 12) {
+      const lastRecord = [...state.records].sort((a, b) => dateOnly(b.startDate) - dateOnly(a.startDate))[0];
+      if (!lastRecord) {
+        return emptyPredictionSeries();
+      }
+
+      const cycleLength = state.settings.cycleLength || calculateAverageCycle() || 28;
+      const start = addDays(dateOnly(lastRecord.startDate), cycleLength);
+      const end = addDays(start, cycleLength * Math.max(1, count));
+      return getPredictionSeriesForRange(start, end);
+    }
+
+    function getPredictionSeriesForRange(rangeStart, rangeEnd) {
       const series = {
         nextPeriodStarts: new Set(),
         predictedPeriodDates: new Set(),
@@ -1585,6 +1610,8 @@
 
       const cycleLength = state.settings.cycleLength || calculateAverageCycle() || 28;
       const periodLength = calculateAveragePeriodLength();
+      const visibleStart = dateOnly(rangeStart);
+      const visibleEnd = dateOnly(rangeEnd);
 
       state.records.forEach(record => {
         const nextPeriod = addDays(dateOnly(record.startDate), cycleLength);
@@ -1599,17 +1626,33 @@
         }
       });
 
-      for (let cycle = 1; cycle <= count; cycle += 1) {
-        const periodStart = addDays(dateOnly(lastRecord.startDate), cycleLength * cycle);
+      let periodStart = addDays(dateOnly(lastRecord.startDate), cycleLength);
+
+      while (periodStart < addDays(visibleStart, -periodLength - cycleLength)) {
+        periodStart = addDays(periodStart, cycleLength);
+      }
+
+      while (periodStart <= addDays(visibleEnd, periodLength)) {
 
         series.nextPeriodStarts.add(formatDate(periodStart));
 
         for (let day = new Date(periodStart); day < addDays(periodStart, periodLength); day = addDays(day, 1)) {
           series.predictedPeriodDates.add(formatDate(day));
         }
+
+        periodStart = addDays(periodStart, cycleLength);
       }
 
       return series;
+    }
+
+    function emptyPredictionSeries() {
+      return {
+        nextPeriodStarts: new Set(),
+        predictedPeriodDates: new Set(),
+        ovulationDates: new Set(),
+        fertileDates: new Set()
+      };
     }
 
     function buildPeriodDateSet() {
