@@ -1080,10 +1080,14 @@
   </div>
   <div class="version-popover" id="versionPopover" aria-live="polite">
     <div class="version-current">
-      <strong>当前版本 v1.4</strong>
-      <span>界面设置与未来预测优化</span>
+      <strong>当前版本 v1.5</strong>
+      <span>修复未来月份预测显示</span>
     </div>
     <ul class="version-list">
+      <li>
+        <strong>v1.4</strong>
+        <span>优化主界面，新增设置与版本</span>
+      </li>
       <li>
         <strong>v1.3</strong>
         <span>修复了后续月份选择日期会导致之前的月份日期消失的问题</span>
@@ -1394,12 +1398,14 @@
         button.addEventListener("click", () => selectCalendarDate(key));
         button.addEventListener("contextmenu", event => openDateMenu(event, key));
 
+        const isFutureMonth = startOfMonth(current) > currentMonthStart;
+
         if (current.getMonth() !== month) button.classList.add("other-month");
-        if (startOfMonth(current) > currentMonthStart) button.classList.add("future-month");
+        if (isFutureMonth) button.classList.add("future-month");
         if (periodDates.has(key)) button.classList.add("period");
         if (!periodDates.has(key) && predictionSeries.predictedPeriodDates.has(key)) button.classList.add("predicted-period");
-        if (predictionSeries.fertileDates.has(key)) button.classList.add("fertile");
-        if (predictionSeries.ovulationDates.has(key)) button.classList.add("ovulation");
+        if (!isFutureMonth && predictionSeries.fertileDates.has(key)) button.classList.add("fertile");
+        if (!isFutureMonth && predictionSeries.ovulationDates.has(key)) button.classList.add("ovulation");
         if (key === todayKey) button.classList.add("today");
         if (key === state.selectedDate || isDateInDraftRange(key)) button.classList.add("selected");
         if (state.dayNotes[key]) button.classList.add("has-note");
@@ -1410,11 +1416,13 @@
 
     function buildDayTitle(dateKey, predictionSeries, periodDates) {
       const labels = [formatDisplayDate(dateKey)];
+      const isFutureMonth = startOfMonth(dateOnly(dateKey)) > startOfMonth(new Date());
+
       if (periodDates.has(dateKey)) labels.push("经期");
       if (predictionSeries.nextPeriodStarts.has(dateKey)) labels.push("预测经期开始");
       if (predictionSeries.predictedPeriodDates.has(dateKey)) labels.push("预测经期");
-      if (predictionSeries.ovulationDates.has(dateKey)) labels.push("预测排卵日");
-      if (predictionSeries.fertileDates.has(dateKey)) labels.push("预测易孕期");
+      if (!isFutureMonth && predictionSeries.ovulationDates.has(dateKey)) labels.push("预测排卵日");
+      if (!isFutureMonth && predictionSeries.fertileDates.has(dateKey)) labels.push("预测易孕期");
       if (state.dayNotes[dateKey]) labels.push(`备注：${state.dayNotes[dateKey]}`);
       return labels.join(" · ");
     }
@@ -1578,21 +1586,26 @@
       const cycleLength = state.settings.cycleLength || calculateAverageCycle() || 28;
       const periodLength = calculateAveragePeriodLength();
 
-      for (let cycle = 1; cycle <= count; cycle += 1) {
-        const periodStart = addDays(dateOnly(lastRecord.startDate), cycleLength * cycle);
-        const ovulation = addDays(periodStart, -14);
+      state.records.forEach(record => {
+        const nextPeriod = addDays(dateOnly(record.startDate), cycleLength);
+        const ovulation = addDays(nextPeriod, -14);
         const fertileStart = addDays(ovulation, -5);
         const fertileEnd = addDays(ovulation, 1);
 
-        series.nextPeriodStarts.add(formatDate(periodStart));
         series.ovulationDates.add(formatDate(ovulation));
-
-        for (let day = new Date(periodStart); day < addDays(periodStart, periodLength); day = addDays(day, 1)) {
-          series.predictedPeriodDates.add(formatDate(day));
-        }
 
         for (let day = new Date(fertileStart); day <= fertileEnd; day = addDays(day, 1)) {
           series.fertileDates.add(formatDate(day));
+        }
+      });
+
+      for (let cycle = 1; cycle <= count; cycle += 1) {
+        const periodStart = addDays(dateOnly(lastRecord.startDate), cycleLength * cycle);
+
+        series.nextPeriodStarts.add(formatDate(periodStart));
+
+        for (let day = new Date(periodStart); day < addDays(periodStart, periodLength); day = addDays(day, 1)) {
+          series.predictedPeriodDates.add(formatDate(day));
         }
       }
 
